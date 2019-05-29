@@ -1,0 +1,87 @@
+---
+title: "Machine Learning Assignment"
+author: "Archit"
+date: "29/05/2019"
+output: html_document
+---
+
+
+## Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+## DATA
+The data is loaded into the working directory. The training set is stored in varaible called pml_training. The test cases on which we have to predict the classe is stored in variable called pml_testing.
+
+```{r}
+pml_training<-read.csv("C:/Users/Archit/Documents/data analysis coursera/pml-training.csv",na.strings = c("NA","#DIV/0!",""))
+pml_testing<-read.csv("C:/Users/Archit/Documents/data analysis coursera/pml-testing.csv",na.strings = c("NA","#DIV/0!",""))
+```
+
+
+
+## Package needed
+
+```{r}
+library(caret)
+library(randomForest)
+library(rattle)
+```
+
+## cleaning training data
+```{r}
+myNZV<-nearZeroVar(pml_training,saveMetrics = TRUE)
+newTraining<-pml_training[,myNZV$nzv==FALSE]
+```
+Now we remove columns that contain mostly NA and also remove columns that are not predictors fot the data
+
+```{r}
+missingData<-is.na(newTraining)
+rmColumns<-which(colSums(missingData)/nrow(newTraining)>0.9)
+newTraining<-newTraining[,-rmColumns]
+impData<-grep("X|_timestamp|user_name",names(newTraining))
+newTraining<-newTraining[,-impData]
+```
+
+## cleaning test cases data
+We do the same transformation on test case data as we did on training data
+```{r}
+NZV<-nearZeroVar(pml_testing,saveMetrics = TRUE)
+newTesting<-pml_testing[,NZV$nzv==FALSE]
+newTesting<-newTesting[,-impData]
+newTesting<-newTesting[,-54]
+```
+
+## spliting the data into training and validation set
+```{r}
+inTrain<-createDataPartition(y=newTraining$classe,p=0.7,list=FALSE)
+training<-newTraining[inTrain,]
+validation<-newTraining[-inTrain,]
+dim(training)
+dim(validation)
+```
+
+## machine learning algorithm using decision trees
+```{r}
+set.seed(555)
+mod1<-train(classe~.,data = training,method="rpart")
+pred1<-predict(mod1,validation)
+confusionMatrix(pred1,validation$classe)
+fancyRpartPlot(mod1$finalModel)
+```
+
+## machine learning algorithm using random forest
+```{r}
+mod2<-randomForest(classe~.,data = training)
+pred2<-predict(mod2,validation)
+confusionMatrix(pred2,validation$classe)
+```
+
+## predicting on test case
+I have used random forest model to predict "classe" of test cases as its accuracy is almost 100%
+```{r,eval=FALSE}
+predTest<-predict(mod2,newTesting)
+predTest
+```
+
+## thank you for evaluating my assignment
